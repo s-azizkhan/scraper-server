@@ -1,5 +1,5 @@
-// Make sure to install the 'pg' package 
-import { drizzle } from 'drizzle-orm/node-postgres';
+// Make sure to install the 'pg' package
+import { drizzle } from "drizzle-orm/node-postgres";
 import * as schema from "./schema";
 
 const dbUrl = Bun.env.DATABASE_URL;
