@@ -12,7 +12,7 @@ if (!dbUrl) {
 const db = drizzle({
   connection: {
     connectionString: dbUrl,
-    ssl: true
+    ssl: false,
   },
   schema,
 });

@@ -1,3 +1,7 @@
+import { z } from 'zod';
+import { up } from "up-fetch";
+import { LinkedInProfileDataSchema, LinkedInProfileDataT } from './linkedin-profile';
+
 const BRIGHTDATA_API_TOKEN = process.env.BRIGHTDATA_API_TOKEN;
 const BRIGHTDATA_WEBSITE_DATASET_ID = process.env.BRIGHTDATA_WEBSITE_DATASET_ID;
 const BRIGHTDATA_LINKEDIN_PROFILE_DATASET_ID = process.env.BRIGHTDATA_LINKEDIN_PROFILE_DATASET_ID;
@@ -12,6 +16,12 @@ if (!BRIGHTDATA_WEBSITE_DATASET_ID) {
 if (!BRIGHTDATA_LINKEDIN_PROFILE_DATASET_ID) {
     console.warn("BRIGHTDATA_LINKEDIN_PROFILE_DATASET_ID environment variable is not set. LinkedIn scrapes will likely fail.");
 }
+
+const brightDataUp = up(fetch, () => ({
+    baseUrl: BRIGHTDATA_BASE_URL,
+    timeout: 30000,
+    headers: { Authorization: `Bearer ${BRIGHTDATA_API_TOKEN}`, 'Content-Type': 'application/json' }
+}))
 
 export enum ScrapeTypeEnum {
     website = 'website',
@@ -41,18 +51,8 @@ function buildBrightDataUrl(url: string, params: Record<string, string> = {}): s
     Object.keys(params).forEach(key => urlObj.searchParams.append(key, params[key]));
     return urlObj.toString();
 }
-async function triggerScrape(urls: string[], scrapeType: ScrapeTypeEnum): Promise<TriggerResponse> {
-    const options = {
-        method: 'POST',
-        headers: {
-            Authorization: `Bearer ${BRIGHTDATA_API_TOKEN}`,
-            'Content-Type': 'application/json'
-        },
-        body: JSON.stringify(urls.map(u => ({ url: u })))
-        // If the API expects a different format for batch URLs, this line will need adjustment.
-        // For example, if it expects an array of objects directly: JSON.stringify(urls.map(u => ({url: u})))
-    };
 
+async function triggerScrape(urls: string[], scrapeType: ScrapeTypeEnum): Promise<TriggerResponse> {
     let datasetId: string | undefined;
     const params: Record<string, string> = { include_errors: "true" };
 
@@ -68,43 +68,49 @@ async function triggerScrape(urls: string[], scrapeType: ScrapeTypeEnum): Promis
     }
     params.dataset_id = datasetId;
 
-    const reqUrl = buildBrightDataUrl("trigger", params);
-    const response = await fetch(reqUrl, options);
-    if (!response.ok) {
-        const errorText = await response.text();
-        throw new Error(`Failed to trigger scrape: ${response.status} ${errorText}`);
+    try {
+
+        const res = await brightDataUp("trigger", {
+            method: "POST",
+            params: { ...params },
+            body: urls.map(u => ({ url: u }))
+        })
+
+        return res as unknown as TriggerResponse; // TODO: fix this type hint
+    } catch (e) {
+        console.error(`Error from triggerScrape: ${e}`)
+        throw e
     }
-    return response.json() as Promise<TriggerResponse>;
 }
 
 async function checkScrapeProgress(snapshotId: string): Promise<ProgressResponse> {
-    const options = {
-        method: 'GET',
-        headers: { Authorization: `Bearer ${BRIGHTDATA_API_TOKEN}` }
-    };
-
-    const reqUrl = buildBrightDataUrl(`progress/${snapshotId}`)
-    const response = await fetch(reqUrl, options);
-    if (!response.ok) {
-        const errorText = await response.text();
-        throw new Error(`Failed to check scrape progress: ${response.status} ${errorText}`);
+    try {
+        const response = await brightDataUp(`progress/${snapshotId}`);
+        return response as unknown as ProgressResponse;
+    } catch (e) {
+        console.error(`Error from checkScrapeProgress: ${e}`)
+        throw e
     }
-    return response.json() as Promise<ProgressResponse>;
 }
+export async function fetchScrapeData(snapshotId: string, responseFormat: "json" | "ndjson" | "jsonl" | "csv" = "json"): Promise<LinkedInProfileDataT[]> {
+    try {
+        const response = await brightDataUp(`/snapshot/${snapshotId}`, {
+            method: "GET",
+            params: {
+                format: responseFormat,
+                // compress: "true"
+            },
+            headers: {
+                Authorization: `Bearer ${BRIGHTDATA_API_TOKEN}`
+            },
+            // schema: z.array(LinkedInProfileDataSchema),
+        });
 
-async function fetchScrapeData(snapshotId: string, responseFormat: "json" | "ndjson" | "jsonl" | "csv" = "json"): Promise<SnapshotResponse> {
-    const options = {
-        method: 'GET',
-        headers: { Authorization: `Bearer ${BRIGHTDATA_API_TOKEN}` }
-    };
-
-    const reqUrl = buildBrightDataUrl(`snapshot/${snapshotId}`, { format: responseFormat, compress: "true" })
-    const response = await fetch(reqUrl, options);
-    if (!response.ok) {
-        const errorText = await response.text();
-        throw new Error(`Failed to fetch scrape data: ${response.status} ${errorText}`);
+        return response as unknown as LinkedInProfileDataT[]; // TODO: fix this type hin
+    } catch (e) {
+        console.error(`Error from fetchScrapeData: ${e}`)
+        throw e
     }
-    return response.json() as Promise<SnapshotResponse>;
 }
 
 export async function scrapeUrlWithBrightData(urlsToScrape: string[], scrapeType: ScrapeTypeEnum): Promise<SnapshotResponse> {

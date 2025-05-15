@@ -6,7 +6,7 @@ export const websiteDataTable = pgTable('website_data', {
     websiteUrl: text('website_url').notNull(),
     websiteData: jsonb('website_data').notNull().default('{}'),
     websitewebsiteAISummary: text('website_ai_summary').notNull().default(''),
-    profilewebsiteAISummaryStatus: text('website_ai_summary_status').notNull().default('pending'),
+    websiteAISummaryStatus: text('website_ai_summary_status').notNull().default('pending'),
     websiteAISummaryUpdatedAt: timestamp("website_ai_summary_updated_at"),
     scrapingStatus: text('scraping_status').notNull().default('pending'),
     createdAt: timestamp('created_at').notNull().defaultNow(),

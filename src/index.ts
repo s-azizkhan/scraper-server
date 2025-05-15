@@ -7,6 +7,7 @@ import { requestId } from "hono/request-id";
 import summarizeRoutes from "./routes/summarize";
 import scrapeRoutes from "./routes/scrape";
 import apiKeyRoutes from "./routes/api-keys";
+import { fetchScrapeData } from "./services/scrapers/brightdata";
 
 const app = new Hono();
 app.use(etag(), logger());
@@ -20,8 +21,10 @@ app.use(
   }),
 );
 
-app.get("/healthz", (c) => {
-  return c.json({ status: "ok", timestamp: Date.now() });
+app.get("/healthz", async (c) => {
+
+  const data = await fetchScrapeData("s_mapb3ev52o83rqg4gk");
+  return c.json({ status: "ok", timestamp: Date.now(), data });
 });
 
 app.route("/api-keys", apiKeyRoutes);
