@@ -113,7 +113,7 @@ export async function fetchScrapeData(snapshotId: string, responseFormat: "json"
     }
 }
 
-export async function scrapeUrlWithBrightData(urlsToScrape: string[], scrapeType: ScrapeTypeEnum): Promise<SnapshotResponse> {
+export async function scrapeUrlWithBrightData(urlsToScrape: string[], scrapeType: ScrapeTypeEnum): Promise<unknown[]> {
     if (!BRIGHTDATA_API_TOKEN) {
         throw new Error("BRIGHTDATA_API_TOKEN is not configured.");
     }

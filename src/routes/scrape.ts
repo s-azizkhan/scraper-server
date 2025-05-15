@@ -7,7 +7,7 @@ import { HTTPException } from "hono/http-exception";
 import { addApiUsage } from "../services/api-usage";
 import { apiKeyTable } from "../drizzle/schema";
 import { scrapeUrlWithBrightData, ScrapeTypeEnum } from "../services/scrapers/brightdata";
-import { getLinkedInDataByUrl, inserLinkedinScrapingData, insertWebsiteScrapingData, updateLinkedinScrapingData } from "../services/insert-scraping-data";
+import { getLinkedInDataByUrl, inserLinkedinScrapingData, insertWebsiteScrapingData, updateLinkedinScrapingData, getWebsiteDataByUrl, updateWebsiteScrapingData } from "../services/insert-scraping-data";
 import { LinkedinUrlTypeEnum } from "../drizzle/schema";
 import { LinkedInProfileDataT } from "../services/scrapers/linkedin-profile";
 
@@ -87,15 +87,29 @@ scrapeRoutes.post('/website', async (c) => {
     ) as typeof apiKeyTable.$inferSelect;
     await addApiUsage(apiKeyData.id, "WEBSITE_SCRAPE", urls.toString());
 
+    const newUrls: string[] = [];
+    const existingWebsiteData = [];
+    for (const url of urls) {
+      const existingData = await getWebsiteDataByUrl(url);
+      if (existingData && existingData.scrapingStatus === "success") {
+        existingWebsiteData.push(existingData);
+        continue;
+      }
+      newUrls.push(url.trim());
+    }
 
-    // add to DB
-    await insertWebsiteScrapingData(urls);
+    if (newUrls.length === 0) {
+      return c.json({ message: 'All URLs already exist in the database and are successfully scraped', data: existingWebsiteData });
+    }
 
-    // const data = await scrapeUrlWithBrightData(urls, ScrapeTypeEnum.website); // Hardcoded 'website' type
+    // For URLs not found or not successfully scraped, insert them with 'pending' status
+    await insertWebsiteScrapingData(newUrls); // Default status is 'pending'
 
-    const data = {};
-    // TODO: Implement logic to puch data to the database
-    return c.json({ message: 'Website scrape successful', data });
+    const scrapedData = await scrapeUrlWithBrightData(newUrls, ScrapeTypeEnum.website);
+
+    const dbResponse = await updateWebsiteScrapingData(scrapedData, "success");
+
+    return c.json({ message: 'Website data scraped successfully', data: [...dbResponse, ...existingWebsiteData] });
   } catch (error: any) {
     console.error('Error scraping website:', error);
     const statusCode = error instanceof HTTPException ? error.status : 500;

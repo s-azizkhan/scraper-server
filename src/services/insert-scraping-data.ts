@@ -67,8 +67,8 @@ async function updateLinkedinScrapingData(linkedinUrlsWithData: LinkedInProfileD
                 .where(eq(linkedInDataTable.linkedinUrl, urlData.url))
                 .returning()
         );
-        const [data] = await Promise.all(updatePromises);
-        return data;
+        const results = await Promise.all(updatePromises);
+        return results.flat();
     } catch (error) {
         console.error(error);
         throw new Error("Error updating LinkedIn scraping data");
@@ -90,5 +90,43 @@ async function insertWebsiteScrapingData(urls: string[], scrapingStatus: string 
 }
 
 
+async function getWebsiteDataByUrl(url: string): Promise<typeof websiteDataTable.$inferSelect | null> {
+    try {
+        const result = await db
+            .select()
+            .from(websiteDataTable)
+            .where(eq(websiteDataTable.websiteUrl, url))
+            .limit(1)
+            .execute();
 
-export { inserLinkedinScrapingData, updateLinkedinScrapingData, insertWebsiteScrapingData, getLinkedInDataByUrl, getLinkedinScrapingDataByUrlType };
+        return result[0] || null;
+    } catch (error) {
+        console.error(error);
+        throw new Error("Error fetching website data by URL");
+    }
+}
+
+async function updateWebsiteScrapingData(websiteUrlsWithData:any[], scrapingStatus: string) {
+    try {
+        const updatePromises = websiteUrlsWithData?.map((urlData) =>
+            db.update(websiteDataTable)
+                .set({
+                    websiteData: urlData,
+                    scrapingStatus,
+                })
+                .where(eq(websiteDataTable.websiteUrl, urlData.input.url))
+                .returning()
+        );
+        const results = await Promise.all(updatePromises);
+        // Assuming we want to return the array of updated records, similar to updateLinkedinScrapingData
+        // If only one update is expected or the structure is different, this might need adjustment.
+        return results.flat(); 
+    } catch (error) {
+        console.error(error);
+        throw new Error("Error updating website scraping data");
+    }
+}
+
+
+
+export { inserLinkedinScrapingData, updateLinkedinScrapingData, insertWebsiteScrapingData, getLinkedInDataByUrl, getLinkedinScrapingDataByUrlType, getWebsiteDataByUrl, updateWebsiteScrapingData };
