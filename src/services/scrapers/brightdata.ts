@@ -1,6 +1,6 @@
 const BRIGHTDATA_API_TOKEN = process.env.BRIGHTDATA_API_TOKEN;
 const BRIGHTDATA_WEBSITE_DATASET_ID = process.env.BRIGHTDATA_WEBSITE_DATASET_ID;
-const BRIGHTDATA_LINKEDIN_DATASET_ID = process.env.BRIGHTDATA_LINKEDIN_DATASET_ID;
+const BRIGHTDATA_LINKEDIN_PROFILE_DATASET_ID = process.env.BRIGHTDATA_LINKEDIN_PROFILE_DATASET_ID;
 const BRIGHTDATA_BASE_URL = 'https://api.brightdata.com/datasets/v3';
 
 if (!BRIGHTDATA_API_TOKEN) {
@@ -9,8 +9,8 @@ if (!BRIGHTDATA_API_TOKEN) {
 if (!BRIGHTDATA_WEBSITE_DATASET_ID) {
     console.warn("BRIGHTDATA_WEBSITE_DATASET_ID environment variable is not set. Website scrapes will likely fail.");
 }
-if (!BRIGHTDATA_LINKEDIN_DATASET_ID) {
-    console.warn("BRIGHTDATA_LINKEDIN_DATASET_ID environment variable is not set. LinkedIn scrapes will likely fail.");
+if (!BRIGHTDATA_LINKEDIN_PROFILE_DATASET_ID) {
+    console.warn("BRIGHTDATA_LINKEDIN_PROFILE_DATASET_ID environment variable is not set. LinkedIn scrapes will likely fail.");
 }
 
 export enum ScrapeTypeEnum {
@@ -60,7 +60,7 @@ async function triggerScrape(urls: string[], scrapeType: ScrapeTypeEnum): Promis
         datasetId = BRIGHTDATA_WEBSITE_DATASET_ID;
         params.custom_output_fields = "markdown|page_html|ld_json|html2text";
     } else if (scrapeType === 'linkedin') {
-        datasetId = BRIGHTDATA_LINKEDIN_DATASET_ID;
+        datasetId = BRIGHTDATA_LINKEDIN_PROFILE_DATASET_ID;
     }
 
     if (!datasetId) {
@@ -114,8 +114,8 @@ export async function scrapeUrlWithBrightData(urlsToScrape: string[], scrapeType
     if (scrapeType === 'website' && !BRIGHTDATA_WEBSITE_DATASET_ID) {
         throw new Error("BRIGHTDATA_WEBSITE_DATASET_ID is not configured for website scrape.");
     }
-    if (scrapeType === 'linkedin' && !BRIGHTDATA_LINKEDIN_DATASET_ID) {
-        throw new Error("BRIGHTDATA_LINKEDIN_DATASET_ID is not configured for linkedin scrape.");
+    if (scrapeType === 'linkedin' && !BRIGHTDATA_LINKEDIN_PROFILE_DATASET_ID) {
+        throw new Error("BRIGHTDATA_LINKEDIN_PROFILE_DATASET_ID is not configured for linkedin scrape.");
     }
 
     console.log(`Triggering ${scrapeType} scrape for ${urlsToScrape.length} URLs: ${urlsToScrape.join(', ')}`);
