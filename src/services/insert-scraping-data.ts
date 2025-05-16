@@ -106,21 +106,20 @@ async function getWebsiteDataByUrl(url: string): Promise<typeof websiteDataTable
     }
 }
 
-async function updateWebsiteScrapingData(websiteUrlsWithData:any[], scrapingStatus: string) {
+async function updateWebsiteScrapingData(webUrls: string[], websiteUrlsWithData: any[], scrapingStatus: string) {
     try {
-        const updatePromises = websiteUrlsWithData?.map((urlData) =>
-            db.update(websiteDataTable)
+        const updatePromises = websiteUrlsWithData?.map((urlData, dataIndex) => {
+            return db.update(websiteDataTable)
                 .set({
                     websiteData: urlData,
                     scrapingStatus,
                 })
-                .where(eq(websiteDataTable.websiteUrl, urlData.input.url))
+                .where(eq(websiteDataTable.websiteUrl, webUrls[dataIndex]))
                 .returning()
+        }
         );
         const results = await Promise.all(updatePromises);
-        // Assuming we want to return the array of updated records, similar to updateLinkedinScrapingData
-        // If only one update is expected or the structure is different, this might need adjustment.
-        return results.flat(); 
+        return results.flat();
     } catch (error) {
         console.error(error);
         throw new Error("Error updating website scraping data");

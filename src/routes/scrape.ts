@@ -107,7 +107,7 @@ scrapeRoutes.post('/website', async (c) => {
 
     const scrapedData = await scrapeUrlWithBrightData(newUrls, ScrapeTypeEnum.website);
 
-    const dbResponse = await updateWebsiteScrapingData(scrapedData, "success");
+    const dbResponse = await updateWebsiteScrapingData(newUrls, scrapedData, "success");
 
     return c.json({ message: 'Website data scraped successfully', data: [...dbResponse, ...existingWebsiteData] });
   } catch (error: any) {
