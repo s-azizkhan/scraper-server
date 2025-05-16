@@ -1,4 +1,6 @@
 import { z } from 'zod';
+import { getLinkedInDataByUrl } from '../insert-scraping-data';
+import { removeEmptyValues, removeKeyFromObject, removeLinks } from '../helpers';
 
 // Define the Position schema
 const PositionSchema = z.object({
@@ -215,5 +217,50 @@ type LinkedInProfileDataT = {
     bio_links?: Array<any>; // Replace 'any' with a more specific type if needed
 };
 
+/**
+ * 
+ * @param LinkedInUrl 
+ * @returns 
+ */
+const linkedInAiDataParser = async (LinkedInUrl: string): Promise<Partial<LinkedInProfileDataT> | null> => {
+    try {
+        // remove all the links from the data (nested in the data)
+        const scrapedData = await getLinkedInDataByUrl(LinkedInUrl)
+        if (!scrapedData) return null;
+        const data = scrapedData.linkedinData as JSON;
 
-export { LinkedInProfileData, LinkedInProfileDataSchema, LinkedInProfileDataT };
+        let parsedData = removeLinks(data);
+        parsedData = removeKeyFromObject(parsedData, ['id', 'description_html', 'input', 'timestamp', 'default_avatar', 'similar_profiles', 'current_company_name', 'memorialized_account', 'current_company_company_id', 'connections', 'people_also_viewed', 'recommendations_count', 'bio_links', 'location', 'educations_details']);
+        // parse activvity
+        if (Object.keys(parsedData).includes('activity') && parsedData.activity) {
+            parsedData.activity = parsedData.activity.map((activity: any) => {
+                if (!activity.title || activity.title === '') return null;
+                if (!activity?.interaction || activity.interaction === '') return null;
+                return {
+                    title: activity.title,
+                    interaction: activity?.interaction?.split(' by ')[0]?.toLowerCase(),
+                }
+            });
+        }
+        // parse education
+        if (Object.keys(parsedData).includes('education') && parsedData.education) {
+            parsedData.education = parsedData.education.map((education: any) => {
+                // if title is null or not exist, remove it
+                if (!education.title || education.title === '') {
+                    return null;
+                }
+                return education;
+            });
+        }
+        // remove empty values
+        parsedData = removeEmptyValues(parsedData);
+
+        return parsedData as Partial<LinkedInProfileDataT>;
+    } catch (error) {
+        console.error("Error <> linkedInAiDataParser", error);
+        throw error;
+    }
+};
+
+
+export { LinkedInProfileData, LinkedInProfileDataSchema, LinkedInProfileDataT, linkedInAiDataParser };
