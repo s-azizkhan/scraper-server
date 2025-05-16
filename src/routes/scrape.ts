@@ -1,4 +1,5 @@
 import { Hono } from "hono";
+import { timeout } from 'hono/timeout'
 import {
   apiKeyAuthMiddleware,
   incrimentApiUsageMiddleware,
@@ -13,7 +14,7 @@ import { LinkedInProfileDataT } from "../services/scrapers/linkedin-profile";
 
 // --- Scraping APIs --- (Requires API Key Auth)
 const scrapeRoutes = new Hono();
-scrapeRoutes.use("*", apiKeyAuthMiddleware, incrimentApiUsageMiddleware); // Apply API key auth to all scrape routes
+scrapeRoutes.use("*", apiKeyAuthMiddleware, incrimentApiUsageMiddleware, timeout(300000)); // timeout 5minutes
 
 scrapeRoutes.post('/linkedin', async (c) => {
   try {

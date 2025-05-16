@@ -52,18 +52,22 @@ const apiKeyAuthMiddleware = async (c: Context, next: Next) => {
     }
 
     const [keyData] = keyRecord;
+    // rate limiting and usage quota checks
+    if (keyData.usageCount >= keyData.usageLimit) {
+      throw new HTTPException(429, { message: "API usage limit exceeded." });
+    }
 
     // Store key data in context for downstream handlers if needed
     c.set("apiKeyData", keyData);
 
     await next();
   } catch (error) {
-    console.error("API Key Auth Error:", error);
     if (error instanceof HTTPException) {
       throw error; // Re-throw Hono exceptions
     }
+    console.error("API Key Auth Error:", error);
     throw new HTTPException(500, {
-      message: "Internal server error during authentication.",
+      message: "Internal server error during apiKeyAuthMiddleware.",
     });
   }
 };
@@ -71,11 +75,6 @@ const apiKeyAuthMiddleware = async (c: Context, next: Next) => {
 const incrimentApiUsageMiddleware = async (c: Context, next: Next) => {
   try {
     const keyData = await getApiKeyDataFromContext(c);
-
-    // rate limiting and usage quota checks
-    if (keyData.usageCount >= keyData.usageLimit) {
-      throw new HTTPException(429, { message: "Rate limit exceeded." });
-    }
     // Increment usage count (consider atomicity)
     await db
       .update(apiKeyTable)
@@ -84,10 +83,10 @@ const incrimentApiUsageMiddleware = async (c: Context, next: Next) => {
 
     await next();
   } catch (error) {
-    console.error("incrimentApiUsageMiddleware Error:", error);
     if (error instanceof HTTPException) {
       throw error; // Re-throw Hono exceptions
     }
+    console.error("incrimentApiUsageMiddleware Error:", error);
     throw new HTTPException(500, {
       message: "Internal server error during authentication.",
     });
